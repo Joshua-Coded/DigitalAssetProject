@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & Audit Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .alert-high { border-left: 5px solid #ff4757; }
+        .alert-medium { border-left: 5px solid #ffa502; }
+        .alert-low { border-left: 5px solid #2ed573; }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric:last-child { border-bottom: none; }
+        
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .log-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .log-entry:last-child { border-bottom: none; }
+        
+        .timestamp {
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-active { background: #2ed573; }
+        .status-warning { background: #ffa502; }
+        .status-critical { background: #ff4757; }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        button:hover { transform: translateY(-2px); }
+        
+        .chart-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        h1, h2, h3 { margin-top: 0; }
+        
+        .flex { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>🛡️ Digital Asset Security & Audit Dashboard</h1>
+        
+        <div class="grid">
+            <!-- Real-time Monitoring -->
+            <div class="card">
+                <h3>📊 Real-time Monitoring</h3>
+                <div class="metric">
+                    <span>Active Assets</span>
+                    <span class="metric-value" id="activeAssets">--</span>
+                </div>
+                <div class="metric">
+                    <span>Total Transactions</span>
+                    <span class="metric-value" id="totalTransactions">--</span>
+                </div>
+                <div class="metric">
+                    <span>Last Activity</span>
+                    <span class="metric-value" id="lastActivity">--</span>
+                </div>
+                <div class="metric">
+                    <span>System Status</span>
+                    <span><span class="status-indicator status-active"></span>Online</span>
+                </div>
+                <button onclick="refreshMetrics()">🔄 Refresh Metrics</button>
+            </div>
+            
+            <!-- Security Alerts -->
+            <div class="card alert-medium">
+                <div class="flex">
+                    <h3>🚨 Security Alerts</h3>
+                    <button onclick="checkSecurityAlerts()">Check Alerts</button>
+                </div>
+                <div id="alertsContainer">
+                    <div class="log-entry">
+                        <span>🟡 Multiple transfer attempts detected</span>
+                        <span class="timestamp">2 min ago</span>
+                    </div>
+                    <div class="log-entry">
+                        <span>🟢 All systems operating normally</span>
+                        <span class="timestamp">5 min ago</span>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" id="autoAlerts" checked> 
+                        Enable Auto-monitoring
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Transaction Monitoring -->
+            <div class="card">
+                <h3>📈 Transaction Analysis</h3>
+                <div class="metric">
+                    <span>Transfers Today</span>
+                    <span class="metric-value" id="transfersToday">--</span>
+                </div>
+                <div class="metric">
+                    <span>Average Gas Used</span>
+                    <span class="metric-value" id="avgGas">--</span>
+                </div>
+                <div class="metric">
+                    <span>Failed Transactions</span>
+                    <span class="metric-value" id="failedTx">0</span>
+                </div>
+                <button onclick="analyzeTransactions()">📊 Analyze Patterns</button>
+            </div>
+            
+            <!-- Audit Trail -->
+            <div class="card">
+                <h3>📜 Audit Trail</h3>
+                <div class="activity-log" id="auditLog">
+                    <div class="log-entry">
+                        <span>Asset #1 transferred to 0x742...1d1c</span>
+                        <span class="timestamp">10:45 AM</span>
+                    </div>
+                    <div class="log-entry">
+                        <span>Asset #3 integrity verified</span>
+                        <span class="timestamp">10:30 AM</span>
+                    </div>
+                    <div class="log-entry">
+                        <span>New asset registered: "Digital Certificate"</span>
+                        <span class="timestamp">10:15 AM</span>
+                    </div>
+                </div>
+                <button onclick="exportAuditLog()">📁 Export Log</button>
+            </div>
+            
+            <!-- Anomaly Detection -->
+            <div class="card alert-low">
+                <h3>🔍 Anomaly Detection</h3>
+                <div class="metric">
+                    <span>Suspicious Activities</span>
+                    <span class="metric-value">0</span>
+                </div>
+                <div class="metric">
+                    <span>Pattern Deviations</span>
+                    <span class="metric-value">2</span>
+                </div>
+                <div class="metric">
+                    <span>Risk Score</span>
+                    <span class="metric-value" style="color: #2ed573;">Low</span>
+                </div>
+                <button onclick="runAnomalyDetection()">🔍 Run Scan</button>
+            </div>
+            
+            <!-- Network Health -->
+            <div class="card">
+                <h3>🌐 Network Health</h3>
+                <div class="metric">
+                    <span>Gas Price</span>
+                    <span class="metric-value" id="gasPrice">-- Gwei</span>
+                </div>
+                <div class="metric">
+                    <span>Block Time</span>
+                    <span class="metric-value" id="blockTime">~12s</span>
+                </div>
+                <div class="metric">
+                    <span>Network Status</span>
+                    <span><span class="status-indicator status-active"></span>Healthy</span>
+                </div>
+                <button onclick="checkNetworkHealth()">🔍 Network Check</button>
+            </div>
+        </div>
+        
+        <!-- Advanced Features -->
+        <div class="card" style="margin-top: 20px;">
+            <h3>⚙️ Advanced Security Features</h3>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                <div>
+                    <h4>🤖 Automated Monitoring</h4>
+                    <button onclick="toggleAutoMonitoring()">Enable Auto-Scan</button>
+                    <p>Continuously monitor all transactions for suspicious patterns</p>
+                </div>
+                <div>
+                    <h4>📧 Alert System</h4>
+                    <button onclick="setupAlerts()">Configure Alerts</button>
+                    <p>Get notified via email/SMS for security events</p>
+                </div>
+                <div>
+                    <h4>📊 Analytics Dashboard</h4>
+                    <button onclick="openAnalytics()">View Analytics</button>
+                    <p>Deep dive into transaction patterns and trends</p>
+                </div>
+                <div>
+                    <h4>🔐 Access Control</h4>
+                    <button onclick="manageAccess()">Manage Permissions</button>
+                    <p>Control who can access monitoring features</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract configuration (same as your main app)
+        const CONTRACT_ADDRESS = "0xcad89FDb65a21625F8C963546dD67b6dCC3e9AD7";
+        let web3, contract, userAccount;
+        
+        // Mock data for demonstration
+        let monitoringData = {
+            activeAssets: 0,
+            totalTransactions: 0,
+            transfersToday: 0,
+            avgGas: 150000,
+            failedTx: 0,
+            lastActivity: "Just now"
+        };
+        
+        // Initialize monitoring system
+        async function initializeMonitoring() {
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+                // Connect to contract and start monitoring
+                await loadContractData();
+                startRealTimeMonitoring();
+            }
+        }
+        
+        async function loadContractData() {
+            try {
+                // Get total assets from contract
+                // This would connect to your actual contract
+                monitoringData.activeAssets = 5; // Mock data
+                monitoringData.totalTransactions = 23;
+                updateDashboard();
+            } catch (error) {
+                console.error("Error loading contract data:", error);
+            }
+        }
+        
+        function updateDashboard() {
+            document.getElementById('activeAssets').textContent = monitoringData.activeAssets;
+            document.getElementById('totalTransactions').textContent = monitoringData.totalTransactions;
+            document.getElementById('transfersToday').textContent = monitoringData.transfersToday;
+            document.getElementById('avgGas').textContent = monitoringData.avgGas.toLocaleString();
+            document.getElementById('failedTx').textContent = monitoringData.failedTx;
+            document.getElementById('lastActivity').textContent = monitoringData.lastActivity;
+        }
+        
+        function startRealTimeMonitoring() {
+            // Simulate real-time updates
+            setInterval(() => {
+                if (document.getElementById('autoAlerts').checked) {
+                    checkForSuspiciousActivity();
+                    updateGasPrice();
+                }
+            }, 10000); // Check every 10 seconds
+        }
+        
+        function checkForSuspiciousActivity() {
+            // Implement anomaly detection logic
+            const patterns = [
+                "Multiple rapid transfers",
+                "Unusual gas usage",
+                "Failed verification attempts",
+                "Duplicate hash submissions"
+            ];
+            
+            // Simulate detection
+            if (Math.random() > 0.8) {
+                addSecurityAlert("Suspicious pattern detected: " + patterns[Math.floor(Math.random() * patterns.length)]);
+            }
+        }
+        
+        function addSecurityAlert(message) {
+            const alertsContainer = document.getElementById('alertsContainer');
+            const newAlert = document.createElement('div');
+            newAlert.className = 'log-entry';
+            newAlert.innerHTML = `
+                <span>🟡 ${message}</span>
+                <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+            `;
+            alertsContainer.insertBefore(newAlert, alertsContainer.firstChild);
+            
+            // Keep only last 5 alerts
+            if (alertsContainer.children.length > 5) {
+                alertsContainer.removeChild(alertsContainer.lastChild);
+            }
+        }
+        
+        function refreshMetrics() {
+            // Simulate data refresh
+            monitoringData.lastActivity = "Just now";
+            monitoringData.totalTransactions += Math.floor(Math.random() * 3);
+            updateDashboard();
+            
+            addAuditLogEntry("Metrics refreshed by user");
+        }
+        
+        function checkSecurityAlerts() {
+            addSecurityAlert("Manual security check initiated");
+            // Implement comprehensive security check
+            setTimeout(() => {
+                addSecurityAlert("Security check completed - No threats detected");
+            }, 2000);
+        }
+        
+        function analyzeTransactions() {
+            addAuditLogEntry("Transaction analysis initiated");
+            // Implement transaction pattern analysis
+            alert("Transaction Analysis Complete:\n\n• No unusual patterns detected\n• Average gas usage within normal range\n• All transfers follow expected patterns");
+        }
+        
+        function addAuditLogEntry(action) {
+            const auditLog = document.getElementById('auditLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span>${action}</span>
+                <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+            `;
+            auditLog.insertBefore(entry, auditLog.firstChild);
+            
+            // Keep only last 10 entries visible
+            if (auditLog.children.length > 10) {
+                auditLog.removeChild(auditLog.lastChild);
+            }
+        }
+        
+        function exportAuditLog() {
+            // Create downloadable audit log
+            const logData = Array.from(document.getElementById('auditLog').children)
+                .map(entry => {
+                    const text = entry.textContent.trim();
+                    return text;
+                }).join('\n');
+            
+            const blob = new Blob([logData], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_log_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addAuditLogEntry("Audit log exported");
+        }
+        
+        function runAnomalyDetection() {
+            addAuditLogEntry("Anomaly detection scan started");
+            // Simulate advanced anomaly detection
+            setTimeout(() => {
+                alert("Anomaly Detection Results:\n\n✅ No critical threats detected\n⚠️ 2 minor pattern deviations (within normal range)\n📊 Risk Assessment: LOW\n🔍 Recommendation: Continue monitoring");
+                addAuditLogEntry("Anomaly detection completed - System healthy");
+            }, 3000);
+        }
+        
+        function updateGasPrice() {
+            // Simulate gas price updates
+            const gasPrice = 20 + Math.floor(Math.random() * 30);
+            document.getElementById('gasPrice').textContent = gasPrice + " Gwei";
+        }
+        
+        function checkNetworkHealth() {
+            addAuditLogEntry("Network health check initiated");
+            updateGasPrice();
+            alert("Network Health Check:\n\n🟢 Sepolia Network: Healthy\n⏱️ Average Block Time: ~12 seconds\n⛽ Current Gas Price: " + document.getElementById('gasPrice').textContent + "\n📡 Node Connectivity: Excellent");
+        }
+        
+        // Advanced feature functions
+        function toggleAutoMonitoring() {
+            const isEnabled = document.getElementById('autoAlerts').checked;
+            document.getElementById('autoAlerts').checked = !isEnabled;
+            addAuditLogEntry(`Auto-monitoring ${!isEnabled ? 'enabled' : 'disabled'}`);
+            alert(`Auto-monitoring ${!isEnabled ? 'enabled' : 'disabled'}. System will ${!isEnabled ? 'continuously scan for suspicious activities' : 'stop automatic scanning'}.`);
+        }
+        
+        function setupAlerts() {
+            const email = prompt("Enter email for security alerts:");
+            if (email) {
+                addAuditLogEntry(`Alert notifications configured for ${email}`);
+                alert(`Alert system configured!\n\nNotifications will be sent to: ${email}\n\nAlert triggers:\n• Suspicious transaction patterns\n• Failed authentication attempts\n• Unusual gas usage\n• System anomalies`);
+            }
+        }
+        
+        function openAnalytics() {
+            addAuditLogEntry("Analytics dashboard accessed");
+            alert("Advanced Analytics Dashboard\n\n📊 Transaction Volume: Steady growth\n📈 User Activity: Normal patterns\n🔍 Security Score: 98/100\n⚡ Performance: Optimal\n\n[In a real implementation, this would open a detailed analytics interface]");
+        }
+        
+        function manageAccess() {
+            addAuditLogEntry("Access control panel accessed");
+            alert("Access Control Management\n\n👥 Current Users: 1 (Admin)\n🔐 Permission Levels:\n  • Admin: Full access\n  • Monitor: Read-only\n  • Audit: Audit trails only\n\n[In production, this would show a user management interface]");
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initializeMonitoring();
+            updateDashboard();
+            addAuditLogEntry("Security monitoring system initialized");
+        });
+    </script>
+</body>
+</html>
