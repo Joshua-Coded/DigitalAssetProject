@@ -679,7 +679,7 @@
 		}
 	];
         
-        const CONTRACT_ADDRESS = "0xcad89FDb65a21625F8C963546dD67b6dCC3e9AD7";
+        const CONTRACT_ADDRESS = "0xcad89FDb65a21625F8C963546dD67b6dCC3e9AD7"; // Add your deployed contract address here
         
         // Initialize Web3 and connect to MetaMask
         async function connectWallet() {
@@ -860,11 +860,19 @@
             }
             
             const assetId = document.getElementById('transferAssetId').value;
-            const newOwner = document.getElementById('newOwnerAddress').value;
+            let newOwner = document.getElementById('newOwnerAddress').value.trim();
             const reason = document.getElementById('transferReason').value;
             
             if (!assetId || !newOwner || !reason) {
                 showStatus('Please fill all transfer fields', 'error');
+                return;
+            }
+            
+            // Validate and convert address to proper checksum format
+            try {
+                newOwner = web3.utils.toChecksumAddress(newOwner);
+            } catch (error) {
+                showStatus('Invalid Ethereum address format', 'error');
                 return;
             }
             
