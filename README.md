@@ -16,7 +16,7 @@ DigitalAssetProject/
 
 ## Smart Contract Details
 - **Network:** Sepolia Testnet
-- **Contract Address:** `0xcad89FDb65a21625F8C963546dD67b6dCC3e9AD7` (Update with your actual address)
+- **Contract Address:** `0xcad89FDb65a21625F8C963546dD67b6dCC3e9AD7`
 - **Compiler Version:** Solidity ^0.8.0
 - **Development Environment:** Remix IDE
 
