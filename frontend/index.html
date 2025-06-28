@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Asset Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, textarea, button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input, textarea {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px 0;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+        
+        .status.info {
+            background: rgba(33, 150, 243, 0.3);
+            border: 1px solid #2196F3;
+        }
+        
+        .asset-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .wallet-info {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Digital Asset Manager</h1>
+        
+        <div id="walletInfo" class="wallet-info hidden">
+            <strong>Connected:</strong> <span id="walletAddress"></span>
+        </div>
+        
+        <div id="status" class="status hidden"></div>
+        
+        <button id="connectWallet">Connect MetaMask Wallet</button>
+        
+        <div id="mainInterface" class="hidden">
+            <div class="grid">
+                <!-- Register Asset Section -->
+                <div class="container">
+                    <h2>📝 Register New Asset</h2>
+                    <div class="form-group">
+                        <label for="assetName">Asset Name:</label>
+                        <input type="text" id="assetName" placeholder="e.g., My Digital Artwork">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetDescription">Description:</label>
+                        <textarea id="assetDescription" rows="3" placeholder="Describe your digital asset..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="assetHash">Asset Hash:</label>
+                        <input type="text" id="assetHash" placeholder="Cryptographic hash of your asset">
+                    </div>
+                    <button id="registerAsset">Register Asset</button>
+                </div>
+                
+                <!-- Asset Management Section -->
+                <div class="container">
+                    <h2>🔍 Asset Management</h2>
+                    <div class="form-group">
+                        <label for="searchAssetId">Asset ID:</label>
+                        <input type="number" id="searchAssetId" placeholder="Enter asset ID">
+                    </div>
+                    <button id="getAssetDetails">Get Asset Details</button>
+                    <button id="getUserAssets">Get My Assets</button>
+                    
+                    <div id="assetDetails" class="hidden">
+                        <h3>Asset Details:</h3>
+                        <div id="assetInfo"></div>
+                    </div>
+                </div>
+                
+                <!-- Transfer Asset Section -->
+                <div class="container">
+                    <h2>🔄 Transfer Asset</h2>
+                    <div class="form-group">
+                        <label for="transferAssetId">Asset ID:</label>
+                        <input type="number" id="transferAssetId" placeholder="Asset ID to transfer">
+                    </div>
+                    <div class="form-group">
+                        <label for="newOwnerAddress">New Owner Address:</label>
+                        <input type="text" id="newOwnerAddress" placeholder="0x...">
+                    </div>
+                    <div class="form-group">
+                        <label for="transferReason">Reason:</label>
+                        <input type="text" id="transferReason" placeholder="e.g., Sale, Gift">
+                    </div>
+                    <button id="transferAsset">Transfer Asset</button>
+                </div>
+                
+                <!-- Verify Asset Section -->
+                <div class="container">
+                    <h2>✅ Verify Asset</h2>
+                    <div class="form-group">
+                        <label for="verifyAssetId">Asset ID:</label>
+                        <input type="number" id="verifyAssetId" placeholder="Asset ID to verify">
+                    </div>
+                    <div class="form-group">
+                        <label for="verifyHash">Provided Hash:</label>
+                        <input type="text" id="verifyHash" placeholder="Hash to verify against">
+                    </div>
+                    <button id="verifyAsset">Verify Asset Integrity</button>
+                </div>
+            </div>
+            
+            <!-- My Assets Section -->
+            <div class="container">
+                <h2>📋 My Assets</h2>
+                <button id="refreshAssets">Refresh My Assets</button>
+                <div id="myAssets"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let web3;
+        let contract;
+        let userAccount;
+        
+        // Contract ABI (you'll need to update this with your deployed contract's ABI)
+        const CONTRACT_ABI = []; // Add your contract ABI here
+        const CONTRACT_ADDRESS = ""; // Add your deployed contract address here
+        
+        // Initialize Web3 and connect to MetaMask
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    web3 = new Web3(window.ethereum);
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAccount = accounts[0];
+                    
+                    // Check if we're on Sepolia
+                    const chainId = await web3.eth.getChainId();
+                    if (chainId !== 11155111) { // Sepolia chain ID
+                        showStatus('Please switch to Sepolia testnet', 'error');
+                        return;
+                    }
+                    
+                    // Initialize contract (you'll need to add the ABI and address)
+                    if (CONTRACT_ADDRESS && CONTRACT_ABI.length > 0) {
+                        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    }
+                    
+                    document.getElementById('walletAddress').textContent = userAccount;
+                    document.getElementById('walletInfo').classList.remove('hidden');
+                    document.getElementById('mainInterface').classList.remove('hidden');
+                    document.getElementById('connectWallet').style.display = 'none';
+                    
+                    showStatus('Wallet connected successfully!', 'success');
+                } catch (error) {
+                    showStatus('Error connecting wallet: ' + error.message, 'error');
+                }
+            } else {
+                showStatus('MetaMask not detected. Please install MetaMask.', 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function showLoading(buttonId) {
+            const button = document.getElementById(buttonId);
+            button.innerHTML = '<span class="loading"></span> Processing...';
+            button.disabled = true;
+        }
+        
+        function hideLoading(buttonId, originalText) {
+            const button = document.getElementById(buttonId);
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+        
+        // Event listeners
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+        
+        document.getElementById('registerAsset').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized. Please add contract ABI and address.', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('assetName').value;
+            const description = document.getElementById('assetDescription').value;
+            const hash = document.getElementById('assetHash').value;
+            
+            if (!name || !description || !hash) {
+                showStatus('Please fill all fields', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('registerAsset');
+                const result = await contract.methods.registerAsset(name, description, hash)
+                    .send({ from: userAccount });
+                
+                showStatus('Asset registered successfully!', 'success');
+                
+                // Clear form
+                document.getElementById('assetName').value = '';
+                document.getElementById('assetDescription').value = '';
+                document.getElementById('assetHash').value = '';
+                
+            } catch (error) {
+                showStatus('Error registering asset: ' + error.message, 'error');
+            } finally {
+                hideLoading('registerAsset', 'Register Asset');
+            }
+        });
+        
+        // Add more event listeners for other functions...
+        // This is a basic template - you'll need to implement the remaining functions
+        
+        // Placeholder functions for demonstration
+        document.getElementById('getAssetDetails').addEventListener('click', () => {
+            showStatus('Feature available when contract is deployed and configured', 'info');
+        });
+        
+        document.getElementById('getUserAssets').addEventListener('click', () => {
+            showStatus('Feature available when contract is deployed and configured', 'info');
+        });
+        
+        document.getElementById('transferAsset').addEventListener('click', () => {
+            showStatus('Feature available when contract is deployed and configured', 'info');
+        });
+        
+        document.getElementById('verifyAsset').addEventListener('click', () => {
+            showStatus('Feature available when contract is deployed and configured', 'info');
+        });
+        
+        document.getElementById('refreshAssets').addEventListener('click', () => {
+            showStatus('Feature available when contract is deployed and configured', 'info');
+        });
+    </script>
+</body>
+</html>
