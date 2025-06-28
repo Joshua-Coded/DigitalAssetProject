@@ -220,6 +220,21 @@
                     </div>
                     <button id="verifyAsset">Verify Asset Integrity</button>
                 </div>
+                
+                <!-- Transfer History Section -->
+                <div class="container">
+                    <h2>📜 Transfer History</h2>
+                    <div class="form-group">
+                        <label for="historyAssetId">Asset ID:</label>
+                        <input type="number" id="historyAssetId" placeholder="Enter asset ID">
+                    </div>
+                    <button id="getTransferHistory">Get Transfer History</button>
+                    
+                    <div id="transferHistoryResults" class="hidden">
+                        <h3>Transfer History:</h3>
+                        <div id="historyInfo"></div>
+                    </div>
+                </div>
             </div>
             
             <!-- My Assets Section -->
@@ -925,6 +940,51 @@
                 showStatus('Error refreshing assets: ' + error.message, 'error');
             } finally {
                 hideLoading('refreshAssets', 'Refresh My Assets');
+            }
+        });
+        
+        // Get Transfer History Function
+        document.getElementById('getTransferHistory').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            const assetId = document.getElementById('historyAssetId').value;
+            if (!assetId) {
+                showStatus('Please enter an Asset ID', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('getTransferHistory');
+                const history = await contract.methods.getTransferHistory(assetId).call();
+                
+                if (history.length === 0) {
+                    document.getElementById('historyInfo').innerHTML = '<p>No transfer history found for this asset.</p>';
+                } else {
+                    let historyHtml = '';
+                    history.forEach((transfer, index) => {
+                        historyHtml += `
+                            <div class="asset-card">
+                                <h4>Transfer #${index + 1}</h4>
+                                <p><strong>From:</strong> ${transfer.from}</p>
+                                <p><strong>To:</strong> ${transfer.to}</p>
+                                <p><strong>Reason:</strong> ${transfer.reason}</p>
+                                <p><strong>Date:</strong> ${new Date(transfer.timestamp * 1000).toLocaleString()}</p>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('historyInfo').innerHTML = historyHtml;
+                }
+                
+                document.getElementById('transferHistoryResults').classList.remove('hidden');
+                showStatus(`Found ${history.length} transfers`, 'success');
+                
+            } catch (error) {
+                showStatus('Error getting transfer history: ' + error.message, 'error');
+            } finally {
+                hideLoading('getTransferHistory', 'Get Transfer History');
             }
         });
     </script>
