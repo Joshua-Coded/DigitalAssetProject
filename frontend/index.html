@@ -760,28 +760,172 @@
             }
         });
         
-        // Add more event listeners for other functions...
-        // This is a basic template - you'll need to implement the remaining functions
-        
-        // Placeholder functions for demonstration
-        document.getElementById('getAssetDetails').addEventListener('click', () => {
-            showStatus('Feature available when contract is deployed and configured', 'info');
+        // Get Asset Details Function
+        document.getElementById('getAssetDetails').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            const assetId = document.getElementById('searchAssetId').value;
+            if (!assetId) {
+                showStatus('Please enter an Asset ID', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('getAssetDetails');
+                const result = await contract.methods.getAssetDetails(assetId).call();
+                
+                const assetInfo = `
+                    <div class="asset-card">
+                        <h4>Asset #${result.assetId}</h4>
+                        <p><strong>Name:</strong> ${result.name}</p>
+                        <p><strong>Description:</strong> ${result.description}</p>
+                        <p><strong>Hash:</strong> ${result.assetHash}</p>
+                        <p><strong>Owner:</strong> ${result.assetOwner}</p>
+                        <p><strong>Created:</strong> ${new Date(result.timestamp * 1000).toLocaleString()}</p>
+                    </div>
+                `;
+                
+                document.getElementById('assetInfo').innerHTML = assetInfo;
+                document.getElementById('assetDetails').classList.remove('hidden');
+                showStatus('Asset details retrieved successfully!', 'success');
+                
+            } catch (error) {
+                showStatus('Error getting asset details: ' + error.message, 'error');
+            } finally {
+                hideLoading('getAssetDetails', 'Get Asset Details');
+            }
         });
         
-        document.getElementById('getUserAssets').addEventListener('click', () => {
-            showStatus('Feature available when contract is deployed and configured', 'info');
+        // Get User Assets Function
+        document.getElementById('getUserAssets').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('getUserAssets');
+                const userAssets = await contract.methods.getUserAssets(userAccount).call();
+                
+                if (userAssets.length === 0) {
+                    document.getElementById('myAssets').innerHTML = '<p>No assets found for your account.</p>';
+                } else {
+                    let assetsHtml = '<h3>Your Assets:</h3>';
+                    for (let assetId of userAssets) {
+                        const assetDetails = await contract.methods.getAssetDetails(assetId).call();
+                        assetsHtml += `
+                            <div class="asset-card">
+                                <h4>Asset #${assetDetails.assetId}</h4>
+                                <p><strong>Name:</strong> ${assetDetails.name}</p>
+                                <p><strong>Description:</strong> ${assetDetails.description}</p>
+                                <p><strong>Hash:</strong> ${assetDetails.assetHash}</p>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('myAssets').innerHTML = assetsHtml;
+                }
+                
+                showStatus(`Found ${userAssets.length} assets`, 'success');
+                
+            } catch (error) {
+                showStatus('Error getting user assets: ' + error.message, 'error');
+            } finally {
+                hideLoading('getUserAssets', 'Get My Assets');
+            }
         });
         
-        document.getElementById('transferAsset').addEventListener('click', () => {
-            showStatus('Feature available when contract is deployed and configured', 'info');
+        // Transfer Asset Function
+        document.getElementById('transferAsset').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            const assetId = document.getElementById('transferAssetId').value;
+            const newOwner = document.getElementById('newOwnerAddress').value;
+            const reason = document.getElementById('transferReason').value;
+            
+            if (!assetId || !newOwner || !reason) {
+                showStatus('Please fill all transfer fields', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('transferAsset');
+                const result = await contract.methods.transferAsset(assetId, newOwner, reason)
+                    .send({ from: userAccount });
+                
+                showStatus('Asset transferred successfully!', 'success');
+                
+                // Clear form
+                document.getElementById('transferAssetId').value = '';
+                document.getElementById('newOwnerAddress').value = '';
+                document.getElementById('transferReason').value = '';
+                
+            } catch (error) {
+                showStatus('Error transferring asset: ' + error.message, 'error');
+            } finally {
+                hideLoading('transferAsset', 'Transfer Asset');
+            }
         });
         
-        document.getElementById('verifyAsset').addEventListener('click', () => {
-            showStatus('Feature available when contract is deployed and configured', 'info');
+        // Verify Asset Function
+        document.getElementById('verifyAsset').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            const assetId = document.getElementById('verifyAssetId').value;
+            const providedHash = document.getElementById('verifyHash').value;
+            
+            if (!assetId || !providedHash) {
+                showStatus('Please fill all verification fields', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('verifyAsset');
+                const isValid = await contract.methods.verifyAssetIntegrity(assetId, providedHash).call();
+                
+                if (isValid) {
+                    showStatus('✅ Asset integrity verified! Hash matches.', 'success');
+                } else {
+                    showStatus('❌ Asset integrity check failed! Hash does not match.', 'error');
+                }
+                
+            } catch (error) {
+                showStatus('Error verifying asset: ' + error.message, 'error');
+            } finally {
+                hideLoading('verifyAsset', 'Verify Asset Integrity');
+            }
         });
         
-        document.getElementById('refreshAssets').addEventListener('click', () => {
-            showStatus('Feature available when contract is deployed and configured', 'info');
+        // Refresh Assets Function
+        document.getElementById('refreshAssets').addEventListener('click', async () => {
+            if (!contract) {
+                showStatus('Contract not initialized', 'error');
+                return;
+            }
+            
+            try {
+                showLoading('refreshAssets');
+                const totalAssets = await contract.methods.getTotalAssets().call();
+                const userAssets = await contract.methods.getUserAssets(userAccount).call();
+                
+                showStatus(`Total assets in system: ${totalAssets}, You own: ${userAssets.length}`, 'info');
+                
+                // Trigger getUserAssets to refresh the display
+                document.getElementById('getUserAssets').click();
+                
+            } catch (error) {
+                showStatus('Error refreshing assets: ' + error.message, 'error');
+            } finally {
+                hideLoading('refreshAssets', 'Refresh My Assets');
+            }
         });
     </script>
 </body>
